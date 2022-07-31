@@ -1,0 +1,58 @@
+version: '2.2'
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.3.3
+    container_name: es-01
+    environment:
+    - bootstrap.memory_lock=true
+    - cluster.name=docker-cluster
+    - cluster.routing.allocation.disk.threshold_enabled=false
+    - discovery.type=single-node
+    - ES_JAVA_OPTS=-XX:UseAVX=2 -Xms1g -Xmx1g
+    ulimits:
+      memlock:
+        hard: -1
+        soft: -1
+    volumes:
+    - es-data:/usr/share/elasticsearch/data
+    ports:
+    - "9200:9200"
+    networks:
+    - elastic
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.3.3
+    container_name: kib-01
+    depends_on:
+      - elasticsearch
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+    - "5601:5601"
+    networks:
+    - elastic
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: web-book
+    depends_on:
+      - elasticsearch
+      - kibana
+    environment:
+      - HTTP_CERT=../../http_ca.crt
+      - ELASTIC_PASSWORD=YNEx6c+8MPj+Ehe1Gp2I
+    ports:
+      - "8004:8000"
+    networks:
+      - elastic
+
+volumes:
+  es-data:
+    driver: local
+
+networks:
+  elastic:
+    driver: bridge
