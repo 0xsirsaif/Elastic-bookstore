@@ -62,17 +62,17 @@ async def get_all():
         'hits': {'total': {'value': 10000, 'relation': 'gte'}, 'max_score': 1.0, 'hits': [*** DATA IS HERE ***]}
     }
     """
-    all_books = await ES.search(
+    result = await ES.search(
         index="books", body={"size": 1000, "query": {"match_all": {}}}
     )
 
-    return [doc["_source"] for doc in all_books["hits"]["hits"]]
+    return [doc["_source"] for doc in result["hits"]["hits"]]
 
 
 @router.get("/multi")
 async def get_multiple_docs(ids: list = Depends(query_param_as_list)):
-    multiple_books = await ES.search(index="books", query={"ids": {"values": ids}})
-    return [doc["_source"] for doc in multiple_books["hits"]["hits"]]
+    result = await ES.search(index="books", query={"ids": {"values": ids}})
+    return [doc["_source"] for doc in result["hits"]["hits"]]
 
 
 @router.get("/by_field/{field}/{field_value}")
@@ -89,9 +89,79 @@ async def get_docs_by_field(field: str = None, field_value: str = None, exact: b
     if exact:
         query["match"] = {field: {"query": field_value, "operator": "AND"}}
 
-    docs = await ES.search(index="books", query=query)
+    result = await ES.search(index="books", query=query)
 
-    return [doc["_source"] for doc in docs["hits"]["hits"]]
+    return [doc["_source"] for doc in result["hits"]["hits"]]
+
+
+@router.get("/multi_fields/{keyword}")
+async def search_across_multi_fields(keyword: str = None):
+    result = await ES.search(index="books", query={
+        "multi_match": {
+            "query": keyword,
+            "fields": ["title^3", "author"]
+        }
+    })
+    # Before boosting the `Title` field:
+    # [4.9443154,4.9443154,4.9443154,4.9443154,4.9443154,4.9443154,4.9443154,4.9443154,4.9443154,4.9443154]
+
+    # After boosting the `Title` field
+    # 2: [14.832949,14.832949,14.832949,14.832949,14.832949,14.832949,14.832949,14.832949,14.832949,14.832949]
+
+    return [doc["_source"] for doc in result["hits"]["hits"]]
+
+
+@router.get("/by_phrase/{phrase}")
+async def match_by_phrase(phrase: str = ""):
+    """
+    TODO:
+        - highlight feature doesn't return highlighted phrase.
+        - How to use Fuzziness in this example?
+    """
+    result = await ES.search(index="books", query={
+        # "match_phrase": {
+        #     "title": phrase
+        # },
+        "fuzzy": {
+            "title": {
+                "value": phrase,
+                "fuzziness": 2
+            }
+        }
+    }, highlight={
+        "fields": {
+            "author": {}
+        }
+    })
+
+    return [doc["_source"] for doc in result["hits"]["hits"]]
+
+
+@router.get("/term/{field}/{value}")
+async def term_query(field: str = "amazon_rating", value: str = None):
+    result = await ES.search(index="books", size=100, query={
+        "term": {
+            field: {
+                "value": value
+            }
+        }
+    })
+
+    return [doc["_source"] for doc in result["hits"]["hits"]]
+
+
+@router.get("/range/{field}")
+async def range_query(field: str = "amazon_rating", gte: str = 0, lte: str = 0):
+    result = await ES.search(index="books", size=100, query={
+        "range": {
+            field: {
+                "gte": gte,
+                "lte": lte
+            }
+        }
+    })
+
+    return [doc["_source"] for doc in result["hits"]["hits"]]
 
 
 @router.put("/{book_id}")
