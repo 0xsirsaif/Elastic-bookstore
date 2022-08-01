@@ -4,7 +4,7 @@ import random
 import faker
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
-from faker.providers import BaseProvider, currency, date_time, person
+from faker.providers import BaseProvider, currency, date_time, person, lorem
 
 fake = faker.Faker()
 
@@ -27,6 +27,7 @@ class PriceList(BaseProvider):
 fake.add_provider(person)
 fake.add_provider(date_time)
 fake.add_provider(currency)
+fake.add_provider(lorem)
 fake.add_provider(Amazon)
 fake.add_provider(PriceList)
 
@@ -37,7 +38,7 @@ def gen_fake_books(num_docs: int):
             "_index": "books",
             "_id": doc_id,
             "_source": {
-                "title": fake.name(),
+                "title": fake.sentence(nb_words=10),
                 "author": fake.first_name() + " " + fake.last_name(),
                 "release_date": fake.date(),
                 "amazon_rating": fake.rate(),
