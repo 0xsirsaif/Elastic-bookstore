@@ -1,10 +1,10 @@
-import random
 import os
+import random
 
 import faker
-from faker.providers import BaseProvider, person, date_time, currency
-from elasticsearch.helpers import bulk
 from elasticsearch import Elasticsearch
+from elasticsearch.helpers import bulk
+from faker.providers import BaseProvider, currency, date_time, person
 
 fake = faker.Faker()
 
@@ -36,8 +36,8 @@ def gen_fake_books(num_docs: int):
         _doc = {
             "_index": "books",
             "_id": doc_id,
-            "title": fake.name(),
             "_source": {
+                "title": fake.name(),
                 "author": fake.first_name() + " " + fake.last_name(),
                 "release_date": fake.date(),
                 "amazon_rating": fake.rate(),
