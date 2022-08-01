@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 
-from app.api import ping
-from app.api import bookstore
+from app.api import bookstore, ping
 
 app = FastAPI()
 
