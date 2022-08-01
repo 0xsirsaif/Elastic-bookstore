@@ -4,7 +4,7 @@ import random
 import faker
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
-from faker.providers import BaseProvider, currency, date_time, person, lorem
+from faker.providers import BaseProvider, currency, date_time, lorem, person
 
 fake = faker.Faker()
 

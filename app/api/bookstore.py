@@ -2,10 +2,8 @@ import os
 from datetime import date
 
 from elasticsearch import AsyncElasticsearch
-
 from fastapi import APIRouter, Depends
 from fastapi.encoders import jsonable_encoder
-
 from pydantic import BaseModel, Extra
 
 
@@ -76,16 +74,14 @@ async def get_multiple_docs(ids: list = Depends(query_param_as_list)):
 
 
 @router.get("/by_field/{field}/{field_value}")
-async def get_docs_by_field(field: str = None, field_value: str = None, exact: bool = False):
+async def get_docs_by_field(
+    field: str = None, field_value: str = None, exact: bool = False
+):
     """
     By default, the engine is implicitly adding an (OR) operator when creating a search query with multiple words.
     Use (AND) Operator explicitly
     """
-    query = {
-        "match": {
-            field: field_value
-        }
-    }
+    query = {"match": {field: field_value}}
     if exact:
         query["match"] = {field: {"query": field_value, "operator": "AND"}}
 
@@ -96,12 +92,10 @@ async def get_docs_by_field(field: str = None, field_value: str = None, exact: b
 
 @router.get("/multi_fields/{keyword}")
 async def search_across_multi_fields(keyword: str = None):
-    result = await ES.search(index="books", query={
-        "multi_match": {
-            "query": keyword,
-            "fields": ["title^3", "author"]
-        }
-    })
+    result = await ES.search(
+        index="books",
+        query={"multi_match": {"query": keyword, "fields": ["title^3", "author"]}},
+    )
     # Before boosting the `Title` field:
     # [4.9443154,4.9443154,4.9443154,4.9443154,4.9443154,4.9443154,4.9443154,4.9443154,4.9443154,4.9443154]
 
@@ -118,48 +112,34 @@ async def match_by_phrase(phrase: str = ""):
         - highlight feature doesn't return highlighted phrase.
         - How to use Fuzziness in this example?
     """
-    result = await ES.search(index="books", query={
-        # "match_phrase": {
-        #     "title": phrase
-        # },
-        "fuzzy": {
-            "title": {
-                "value": phrase,
-                "fuzziness": 2
-            }
-        }
-    }, highlight={
-        "fields": {
-            "author": {}
-        }
-    })
+    result = await ES.search(
+        index="books",
+        query={
+            # "match_phrase": {
+            #     "title": phrase
+            # },
+            "fuzzy": {"title": {"value": phrase, "fuzziness": 2}}
+        },
+        highlight={"fields": {"author": {}}},
+    )
 
     return [doc["_source"] for doc in result["hits"]["hits"]]
 
 
 @router.get("/term/{field}/{value}")
 async def term_query(field: str = "amazon_rating", value: str = None):
-    result = await ES.search(index="books", size=100, query={
-        "term": {
-            field: {
-                "value": value
-            }
-        }
-    })
+    result = await ES.search(
+        index="books", size=100, query={"term": {field: {"value": value}}}
+    )
 
     return [doc["_source"] for doc in result["hits"]["hits"]]
 
 
 @router.get("/range/{field}")
 async def range_query(field: str = "amazon_rating", gte: str = 0, lte: str = 0):
-    result = await ES.search(index="books", size=100, query={
-        "range": {
-            field: {
-                "gte": gte,
-                "lte": lte
-            }
-        }
-    })
+    result = await ES.search(
+        index="books", size=100, query={"range": {field: {"gte": gte, "lte": lte}}}
+    )
 
     return [doc["_source"] for doc in result["hits"]["hits"]]
 
@@ -180,4 +160,3 @@ async def get_doc(book_id: str):
     """
     resp = await ES.get_source(index="books", id=book_id)
     return resp
-
