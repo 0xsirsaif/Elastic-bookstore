@@ -1,10 +1,13 @@
 import os
 from datetime import date
 
-from elasticsearch import AsyncElasticsearch
 from fastapi import APIRouter, Depends
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Extra
+
+from app.elastic import get_elastic
+
+ES = get_elastic()
 
 
 class Prices(BaseModel):
@@ -26,13 +29,6 @@ class Book(BaseModel):
 
 
 router = APIRouter()
-
-HTTP_CERT = os.getenv("ES_HTTP_CERT", "../../http_ca.crt")
-ELASTIC_PASSWORD = os.getenv("ELASTIC_PASSWORD", "YNEx6c+8MPj+Ehe1Gp2I")
-
-ES = AsyncElasticsearch(
-    f"https://elastic:{ELASTIC_PASSWORD}@localhost:9200", verify_certs=False
-)
 
 
 async def query_param_as_list(q: str):
@@ -140,6 +136,20 @@ async def range_query(field: str = "amazon_rating", gte: str = 0, lte: str = 0):
     result = await ES.search(
         index="books", size=100, query={"range": {field: {"gte": gte, "lte": lte}}}
     )
+
+    return [doc["_source"] for doc in result["hits"]["hits"]]
+
+
+@router.get("/compound/")
+async def compound_query(must: str = None, must_not: str = None, should: str = None, filter: str = None):
+    result = await ES.search(index="books", query={
+        "bool": {
+            "must": None,
+            "must_not": None,
+            "should": None,
+            "filter": None,
+        }
+    })
 
     return [doc["_source"] for doc in result["hits"]["hits"]]
 
