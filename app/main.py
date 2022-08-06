@@ -2,7 +2,7 @@ import logging
 
 from fastapi import FastAPI
 
-from app.api import bookstore, ping
+from app.api import bookstore, ping, covid
 from app.elastic import get_elastic
 
 logger = logging.getLogger("uvicorn")
@@ -13,6 +13,7 @@ def generate_app() -> FastAPI:
 
     application.include_router(ping.router)
     application.include_router(bookstore.router, prefix="/bookstore", tags=["bookstore"])
+    application.include_router(covid.router, prefix="/covid", tags=["covid"])
 
     return application
 

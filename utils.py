@@ -91,7 +91,6 @@ if __name__ == "__main__":
     if index_name == "books":
         bulk(ES, gen_fake_books(num_records))
     elif index_name == "covid":
-        print("???????")
         bulk(ES, gen_fake_covid_stats(num_records))
 
     ES.close()
