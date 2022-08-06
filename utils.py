@@ -1,10 +1,11 @@
-import os
 import random
+import sys
 
 import faker
-from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
-from faker.providers import BaseProvider, currency, date_time, lorem, person
+from faker.providers import BaseProvider, currency, date_time, lorem, person, address
+
+from app.elastic import get_elastic
 
 fake = faker.Faker()
 
@@ -24,12 +25,19 @@ class PriceList(BaseProvider):
         }
 
 
+class Covid(BaseProvider):
+    def stats(self):
+        return random.randint(1000, 100000)
+
+
 fake.add_provider(person)
 fake.add_provider(date_time)
 fake.add_provider(currency)
 fake.add_provider(lorem)
+fake.add_provider(address)
 fake.add_provider(Amazon)
 fake.add_provider(PriceList)
+fake.add_provider(Covid)
 
 
 def gen_fake_books(num_docs: int):
@@ -46,22 +54,44 @@ def gen_fake_books(num_docs: int):
                 "prices": fake.price_list(),
             },
         }
-        print("==================")
-        print(f"{doc_id}")
-        print(f"{_doc}")
+        print(f"{doc_id}: {_doc}")
         print("==================")
         yield _doc
 
 
-HTTP_CERT = os.getenv("ES_HTTP_CERT", "../../http_ca.crt")
-ELASTIC_PASSWORD = os.getenv("ELASTIC_PASSWORD", "YNEx6c+8MPj+Ehe1Gp2I")
-
-ES = Elasticsearch(
-    f"https://elastic:{ELASTIC_PASSWORD}@localhost:9200", verify_certs=False
-)
+def gen_fake_covid_stats(num_docs: int):
+    for doc_id in range(1, num_docs):
+        _doc = {
+            "_index": "covid",
+            "_id": doc_id,
+            "_source": {
+                "country": fake.country(),
+                "date": fake.date(),
+                "cases": fake.stats(),
+                "deaths": fake.stats(),
+                "recovered": fake.stats(),
+                "critical": fake.stats(),
+            },
+        }
+        print(f"{doc_id}: {_doc}")
+        print("==================")
+        yield _doc
 
 
 if __name__ == "__main__":
-    bulk(ES, gen_fake_books(100000))
+    # establish connection.
+    ES = get_elastic()
+
+    # parse command line arguments
+    num_records = int(sys.argv[1])
+    index_name = sys.argv[2]
+
+    print(num_records, index_name)
+
+    if index_name == "books":
+        bulk(ES, gen_fake_books(num_records))
+    elif index_name == "covid":
+        print("???????")
+        bulk(ES, gen_fake_covid_stats(num_records))
 
     ES.close()
